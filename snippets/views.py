@@ -29,7 +29,7 @@ def api_root(request, format=None):
 
 
 class SnippetList(generics.ListCreateAPIView):
-    queryset = Snippet.objects.first()
+    queryset = Snippet.objects.all()
     serializer_class = SnippetSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)  
 
