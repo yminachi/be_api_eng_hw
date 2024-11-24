@@ -1,7 +1,10 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
 from rest_framework.test import APITestCase
 from rest_framework import status
+from snippets.models.audit_log import AuditLog
+from snippets.models.snippet import Snippet
 
 class UserListViewTests(APITestCase):
     def setUp(self):
@@ -34,6 +37,15 @@ class UserListViewTests(APITestCase):
         response = self.client.post("/users/", {"username": "newUser"})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIsNone(User.objects.filter(username="newUser").first())
+    
+    def test_creating_user_logs_to_audit_log(self):
+        login_response = self.client.login(username=self.staff_user.username, password="password")
+        response = self.client.post("/users/", {"username": "newUser"})
+        log_item = AuditLog.objects.first()
+        self.assertEqual(log_item.content_type, ContentType.objects.get_for_model(User))
+        self.assertEqual(log_item.object_id, User.objects.filter(username="newUser").first().id)
+        self.assertEqual(log_item.user.id, self.staff_user.id)
+        self.assertEqual(log_item.action, "CREATE")
 
 class UserDetailViewTests(APITestCase):
     def setUp(self):
@@ -69,3 +81,13 @@ class UserDetailViewTests(APITestCase):
         response = self.client.delete("/users/4/")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(User.objects.filter(username="Deleteme").first().is_active)
+
+    def test_destroying_user_logs_to_audit_log(self):
+        User.objects.create_user(id=4, username="Deleteme")
+        login_response = self.client.login(username=self.staff_user.username, password="password")
+        response = self.client.delete("/users/4/")
+        log_item = AuditLog.objects.first()
+        self.assertEqual(log_item.content_type, ContentType.objects.get_for_model(User))
+        self.assertEqual(log_item.object_id, 4)
+        self.assertEqual(log_item.user.id, self.staff_user.id)
+        self.assertEqual(log_item.action, "DESTROY")
