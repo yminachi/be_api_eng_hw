@@ -27,5 +27,5 @@ class AuditViewTests(APITestCase):
 
     def test_does_not_list_for_non_authenticated_user(self):
         response = self.client.get("/audit/")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
     
